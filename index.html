@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wegweiser: Nach dem Weg fragen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F7F8; --dots:#D9E4E7; --card:#FFFFFF; --ink:#14323B; --muted:#60808A; --line:#E0EAEC;
+  --start:#0E9F8E; --start-soft:#DDF4F0; --goal:#F2623A; --goal-soft:#FFE7DF; --route:#2F5BEA;
+  --map-bg:#E8F0F2; --street:#FFFFFF; --street-edge:#CFDDE1; --bldg:#D8E4E8; --park:#CDEBD3; --water:#BFE0EE; --pill:#FFFFFF;
+  --btn:#14323B; --btn-ink:#FFFFFF; --seg:#E9F0F2;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme="dark"]{
+  --bg:#0E1A1F; --dots:#1B2C33; --card:#15262D; --ink:#E7F2F3; --muted:#8FAAB1; --line:#233840;
+  --start:#2DC9B4; --start-soft:#12413C; --goal:#FF8059; --goal-soft:#4A2418; --route:#7C9BFF;
+  --map-bg:#1A2E36; --street:#2C444D; --street-edge:#3A5560; --bldg:#223A43; --park:#244A36; --water:#1E4A5E; --pill:#223A43;
+  --btn:#E7F2F3; --btn-ink:#0E1A1F; --seg:#1D3139;
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:'Lexend',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  background-image:radial-gradient(var(--dots) 1.2px,transparent 1.2px);background-size:26px 26px;line-height:1.45}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,.place:focus-visible{outline:3px solid var(--route);outline-offset:3px}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 32px 10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.brand .mark{width:46px;height:46px;border-radius:14px;background:var(--btn);display:grid;place-items:center}
+.brand h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1.1}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:15px}
+.tools{display:flex;gap:10px;flex-wrap:wrap}
+.tool{border:1px solid var(--line);background:var(--card);padding:10px 18px;border-radius:14px;font-weight:500;font-size:15px}
+.tool:hover{border-color:var(--muted)}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) 410px;gap:24px;padding:12px 32px 40px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px}
+.mapcard{padding:14px;position:sticky;top:12px}
+#map{display:block;width:100%;height:auto;border-radius:18px}
+#map>g{animation:fadein .4s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.maptool{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 6px 12px;color:var(--muted);font-size:15px}
+.maptool .tool{padding:8px 14px;font-size:14px;white-space:nowrap}
+.persp{display:flex;align-items:center;gap:14px;margin-top:14px;background:var(--bg);border-radius:18px;padding:10px 14px}
+.mini{flex:none}
+.tbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.lenrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-size:14px;color:var(--muted)}
+.seg.small{margin:0;padding:3px;flex:0 1 240px}
+.seg.small button{padding:7px 4px;font-size:14px}
+.step small{display:block;font-size:12px;font-weight:500;opacity:.8;margin-top:1px}
+.step>div{line-height:1.2}
+.chev{animation:fadein .4s ease .8s both}
+.persp p{margin:0;font-size:17px;font-weight:500;line-height:1.35}
+.persp p b{color:var(--start)}
+.side{display:grid;gap:18px}
+.card h2{margin:0 0 14px;font-size:20px;font-weight:600}
+.round{display:flex;justify-content:space-between;align-items:baseline}
+.round span{color:var(--muted);font-size:15px}
+
+.pair{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch}
+.chip{border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-height:86px;justify-content:center}
+.chip small{font-size:13px;font-weight:500;opacity:.85}
+.chip b{font-size:21px;font-weight:600;line-height:1.2}
+.chip.s{background:var(--start-soft);color:var(--start)}
+.chip.g{background:var(--goal-soft);color:var(--goal)}
+.chip b{color:var(--ink)}
+.arrowmid{align-self:center;color:var(--muted);font-size:26px}
+.btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{border:0;border-radius:16px;padding:14px 20px;font-weight:600;font-size:17px;background:var(--btn);color:var(--btn-ink);flex:1}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.ghost.on{border-color:var(--route);color:var(--route)}
+.btn:active{transform:translateY(1px)}
+.hint{margin:12px 0 0;color:var(--muted);font-size:14px;min-height:20px}
+
+.roles{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end}
+.roles label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.roles input{width:100%;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit;font-size:16px}
+.swap{border:1.5px solid var(--line);background:transparent;border-radius:12px;width:46px;height:46px;font-size:20px}
+
+.seg{display:flex;background:var(--seg);border-radius:14px;padding:4px;gap:4px;margin-bottom:14px}
+.seg button{flex:1;border:0;background:transparent;border-radius:11px;padding:9px 6px;font-weight:500;font-size:15px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.help p{margin:0 0 8px;font-size:15px}
+.help .sent{background:var(--bg);border-radius:12px;padding:9px 13px;margin:0 0 7px;font-size:16px}
+.help h3{margin:14px 0 8px;font-size:14px;font-weight:600;color:var(--muted)}
+.steps{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 10px}
+.step{display:flex;align-items:center;gap:8px;background:#E6ECFF;color:#1E3EB0;border-radius:12px;padding:8px 14px;font-weight:600;font-size:17px}
+:root[data-theme="dark"] .step{background:#25305C;color:#C8D4FF}
+.step i{font-style:normal;font-size:20px}
+.step.end{background:var(--goal-soft);color:var(--goal)}
+.step.end span{color:var(--ink)}
+
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.team{background:var(--bg);border-radius:18px;padding:14px;text-align:center}
+.team input{width:100%;text-align:center;border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:500}
+.team .n{font-size:44px;font-weight:700;line-height:1.1;margin:2px 0 8px}
+.team .pm{display:flex;gap:8px;justify-content:center}
+.team .pm button{width:44px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-size:20px;font-weight:600}
+
+/* map */
+.place{cursor:default}
+.picking .place{cursor:pointer}
+.picking .place:hover .ring-h{opacity:1}
+.ring-h{opacity:0;transition:opacity .15s}
+.route{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.9s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.8);opacity:.7}100%{transform:scale(1.7);opacity:0}}
+.rolling .chip b{opacity:.55}
+
+/* deck */
+.deck{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;flex-direction:column;padding:calc(24px + env(safe-area-inset-top,0px)) 40px calc(24px + env(safe-area-inset-bottom,0px));
+  background-image:radial-gradient(var(--dots) 1.2px,transparent 1.2px);background-size:26px 26px}
+.deck.open{display:flex}
+.deck-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.deck-top .count{color:var(--muted);font-size:15px}
+.slide{flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1180px;width:100%;margin:0 auto;padding:10px 0}
+.slide h2{font-size:clamp(32px,5vw,60px);margin:0 0 26px;letter-spacing:-1px;line-height:1.1}
+.slide .lead{font-size:clamp(18px,2.2vw,28px);color:var(--muted);margin:0 0 22px}
+.rows{display:grid;gap:14px}
+.row{background:var(--card);border:1px solid var(--line);border-left:10px solid var(--goal);border-radius:20px;padding:18px 26px;font-size:clamp(20px,2.8vw,36px);font-weight:500}
+.row em{font-style:normal;color:var(--goal);font-weight:700}
+.row.green{border-left-color:var(--start)}
+.note{margin-top:16px;color:var(--muted);font-size:clamp(16px,1.8vw,22px)}
+.dirs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
+.dir{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px;text-align:center}
+.dir i{display:grid;place-items:center;width:84px;height:84px;margin:0 auto 10px;border-radius:50%;background:#E6ECFF;color:#1E3EB0;font-style:normal;font-size:46px;font-weight:700}
+:root[data-theme="dark"] .dir i{background:#25305C;color:#C8D4FF}
+.dir b{font-size:clamp(22px,3vw,36px)}
+.formula{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:22px;font-size:clamp(20px,2.8vw,34px);font-weight:600}
+.formula span.t{padding:14px 24px;border-radius:16px}
+.t1{background:#FFD76A;color:#3A2A00}.t2{background:var(--goal-soft);color:var(--goal)}.t3{background:var(--seg)}
+.deck-nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.deck-nav .btn{flex:0 0 auto;min-width:140px}
+.dots{display:flex;gap:8px}
+.dots b{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.dots b.on{background:var(--ink)}
+
+@media (max-width:1060px){
+  main{grid-template-columns:1fr;padding:12px 18px 32px}
+  header{padding:18px 18px 8px}
+  .deck{padding-left:20px;padding-right:20px}
+  .dirs{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .route{animation:none;stroke-dashoffset:0}
+  #map>g{animation:none}
+  .chev{animation:none}
+  .pulse{animation:none;opacity:.35}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--btn-ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+    </div>
+    <div>
+      <h1>Wo ist …?</h1>
+      <p>Den Weg fragen und beschreiben</p>
+    </div>
+  </div>
+  <div class="tools">
+    <button class="tool" id="openDeck">Folien</button>
+    <button class="tool" id="fs">Vollbild</button>
+    <button class="tool" id="theme" aria-label="Dunkles Design umschalten">Dunkel</button>
+  </div>
+</header>
+
+<main>
+  <section class="card mapcard" aria-label="Stadtplan">
+    <div class="maptool"><span id="mapnote"></span><span class="tbtns"><button class="tool" id="zoom">Ganze Karte</button><button class="tool" id="orient">Norden oben</button></span></div>
+    <svg id="map" viewBox="0 0 1000 700" role="img" aria-label="Stadtplan mit Orten"></svg>
+  </section>
+
+  <aside class="side">
+    <section class="card" id="task">
+      <div class="round"><h2>Aufgabe</h2><span id="roundNo">Runde 1</span></div>
+      <div class="pair" id="pair">
+        <div class="chip s"><small>Start</small><b id="startName">–</b></div>
+        <div class="arrowmid" aria-hidden="true">→</div>
+        <div class="chip g"><small>Ziel</small><b id="goalName">–</b></div>
+      </div>
+      <div class="persp">
+        <svg class="mini" width="150" height="118" viewBox="0 0 132 104" aria-hidden="true">
+          <path d="M66 74 L22 26 Q66 14 110 26 Z" fill="var(--start)" fill-opacity=".2"/>
+          <circle cx="66" cy="78" r="13" fill="var(--start)"/>
+          <circle cx="66" cy="74" r="3.6" fill="#fff"/><path d="M60 85 Q60 78.5 66 78.5 Q72 78.5 72 85 Z" fill="#fff"/>
+          <g stroke="var(--route)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M66 56 V34 M59 41 L66 33 L73 41"/>
+            <path d="M48 78 H18 M25 71 L17 78 L25 85"/>
+            <path d="M84 78 H114 M107 71 L115 78 L107 85"/>
+          </g>
+          <g font-family="Lexend,system-ui,sans-serif" font-size="11" font-weight="600" fill="var(--ink)" text-anchor="middle">
+            <text x="66" y="12">geradeaus</text><text x="22" y="99">links</text><text x="110" y="99">rechts</text>
+          </g>
+        </svg>
+        <p id="stand"></p>
+      </div>
+      <div class="lenrow"><span>Länge</span>
+        <div class="seg small" id="levelSeg" role="group" aria-label="Länge des Wegs">
+          <button data-level="1" aria-pressed="false">Kurz</button><button data-level="2" aria-pressed="true">Mittel</button><button data-level="3" aria-pressed="false">Lang</button>
+        </div></div>
+      <div class="btns">
+        <button class="btn" id="roll">Würfeln</button>
+        <button class="btn ghost" id="pick">Selbst wählen</button>
+      </div>
+      <p class="hint" id="hint" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
+      <h2>Rollen</h2>
+      <div class="roles">
+        <div><label for="askName" id="askLabel">Fragt</label><input id="askName" value="Person 1"></div>
+        <button class="swap" id="swap" aria-label="Rollen tauschen" title="Rollen tauschen">⇄</button>
+        <div><label for="descName" id="descLabel">Erklärt</label><input id="descName" value="Person 2"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Hilfe</h2>
+      <div class="seg" id="helpSeg" role="group" aria-label="Hilfe-Stufe">
+        <button data-help="0" aria-pressed="true">Ohne</button>
+        <button data-help="1" aria-pressed="false">Sätze</button>
+        <button data-help="2" aria-pressed="false">Weg</button>
+      </div>
+      <div class="help" id="help"></div>
+    </section>
+
+    <section class="card">
+      <h2>Punkte</h2>
+      <div class="teams">
+        <div class="team"><input value="Team 1" aria-label="Name Team 1"><div class="n" id="n1">0</div><div class="pm"><button data-t="1" data-d="-1" aria-label="Minus">−</button><button data-t="1" data-d="1" aria-label="Plus">+</button></div></div>
+        <div class="team"><input value="Team 2" aria-label="Name Team 2"><div class="n" id="n2">0</div><div class="pm"><button data-t="2" data-d="-1" aria-label="Minus">−</button><button data-t="2" data-d="1" aria-label="Plus">+</button></div></div>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<div class="deck" id="deck" role="dialog" aria-label="Folien">
+  <div class="deck-top"><span class="count" id="deckCount"></span><button class="tool" id="closeDeck">Schließen</button></div>
+  <div class="slide" id="slide"></div>
+  <div class="deck-nav">
+    <button class="btn ghost" id="prev">Zurück</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn" id="next">Weiter</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ---------- Daten ---------- */
+  var X0=110, DX=195, Y0=100, DY=150;
+  var P=[
+    {id:'park',n:'Park',a:'der',e:'🌳',c:0,r:0,col:'#2E9E5B'},
+    {id:'bahnhof',n:'Bahnhof',a:'der',e:'🚉',c:2,r:0,col:'#2F5BEA'},
+    {id:'hotel',n:'Hotel',a:'das',e:'🏨',c:4,r:0,col:'#8A5CF6'},
+    {id:'schule',n:'Schule',a:'die',e:'🏫',c:0,r:1,col:'#8A5CF6'},
+    {id:'markt',n:'Markt',a:'der',e:'🥕',c:1,r:1,col:'#E39A12'},
+    {id:'kino',n:'Kino',a:'das',e:'🎬',c:3,r:1,col:'#2E9E5B'},
+    {id:'bank',n:'Bank',a:'die',e:'🏦',c:4,r:1,col:'#8A5CF6'},
+    {id:'post',n:'Post',a:'die',e:'📮',c:1,r:2,col:'#8A5CF6'},
+    {id:'super',n:'Supermarkt',a:'der',e:'🛒',c:2,r:2,col:'#E39A12'},
+    {id:'ubahn',n:'U-Bahn',a:'die',e:'🚇',c:4,r:2,col:'#2F5BEA'},
+    {id:'kh',n:'Krankenhaus',a:'das',e:'🏥',c:0,r:3,col:'#D9435B'},
+    {id:'cafe',n:'Café',a:'das',e:'☕',c:1,r:3,col:'#E39A12'},
+    {id:'hafen',n:'Hafen',a:'der',e:'⚓',c:2,r:3,col:'#2F5BEA'},
+    {id:'apo',n:'Apotheke',a:'die',e:'💊',c:3,r:3,col:'#D9435B'}
+  ];
+  var byId={}; P.forEach(function(p){byId[p.id]=p});
+  var DIRS=[[0,-1],[1,0],[0,1],[-1,0]];
+  var DIRN=['Norden','Osten','Süden','Westen'];
+
+  function xy(c,r){return [X0+c*DX, Y0+r*DY]}
+  function acc(p){return p.a==='der'?'den':p.a}
+  function zum(p){return (p.a==='die'?'zur ':'zum ')+p.n}
+  function dirIndex(dx,dy){for(var i=0;i<4;i++){if(DIRS[i][0]===dx&&DIRS[i][1]===dy)return i}return 0}
+  function rnd(n){return Math.floor(Math.random()*n)}
+
+  /* ---------- Zustand ---------- */
+  var S={round:0, start:null, goal:null, heading:0, pts:[], steps:[], help:2, zoom:true, level:2, fresh:true, curBox:null, curW:0, vbFull:[0,0,1000,700], vbTarget:[0,0,1000,700], picking:false, pendingStart:null, rolling:false, upMode:true};
+
+  /* ---------- Weg berechnen ---------- */
+  var LV={1:{min:2,max:4,turns:1},2:{min:4,max:6,turns:2},3:{min:5,max:7,turns:3}};
+  function countTurns(pts){
+    var t=0,pd=null;
+    for(var i=1;i<pts.length;i++){
+      var d=dirIndex(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+      if(pd!==null&&d!==pd)t++;
+      pd=d;
+    }
+    return t;
+  }
+  function randPath(a,b){
+    var dx=b.c-a.c, dy=b.r-a.r, mv=[], i;
+    for(i=0;i<Math.abs(dx);i++)mv.push('h');
+    for(i=0;i<Math.abs(dy);i++)mv.push('v');
+    for(i=mv.length-1;i>0;i--){var j=rnd(i+1),t=mv[i];mv[i]=mv[j];mv[j]=t}
+    var c=a.c,r=a.r,pts=[[c,r]];
+    mv.forEach(function(m){if(m==='h')c+=(dx>0?1:-1);else r+=(dy>0?1:-1);pts.push([c,r])});
+    return pts;
+  }
+  function buildPath(a,b,need){
+    var best=null,bt=-1;
+    for(var k=0;k<150;k++){
+      var p=randPath(a,b),t=countTurns(p);
+      if(t>bt){best=p;bt=t}
+      if(t>=need)break;
+    }
+    return {pts:best,turns:bt};
+  }
+  function makeRound(startId,goalId){
+    var a=byId[startId], b=byId[goalId];
+    var pts=buildPath(a,b,LV[S.level].turns).pts;
+    var segs=[];
+    for(var i=1;i<pts.length;i++){
+      var d=dirIndex(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+      if(segs.length&&segs[segs.length-1].d===d){segs[segs.length-1].n++}else{segs.push({d:d,n:1})}
+    }
+    var d0=segs[0].d, t=Math.random(), heading;
+    if(t<.4)heading=d0; else if(t<.7)heading=(d0+1)%4; else heading=(d0+3)%4;
+    var cur=heading, steps=segs.map(function(s){var rel=(s.d-cur+4)%4;cur=s.d;return {rel:rel,n:s.n}});
+    S.round++; S.start=a; S.goal=b; S.heading=heading; S.pts=pts; S.steps=steps; S.fresh=true;
+  }
+  function randomPair(){
+    var cfg=LV[S.level];
+    for(var k=0;k<500;k++){
+      var a=P[rnd(P.length)], b=P[rnd(P.length)];
+      var dist=Math.abs(a.c-b.c)+Math.abs(a.r-b.r);
+      if(a===b||dist<cfg.min||dist>cfg.max)continue;
+      if(buildPath(a,b,cfg.turns).turns>=cfg.turns)return [a.id,b.id];
+    }
+    return ['hotel','park'];
+  }
+
+  /* ---------- Karte zeichnen ---------- */
+  function geo(rot){
+    if(rot===1)return {W:700,H:1000,M:'matrix(0 -1 1 0 0 1000)',T:function(x,y){return [y,1000-x]}};
+    if(rot===2)return {W:1000,H:700,M:'matrix(-1 0 0 -1 1000 700)',T:function(x,y){return [1000-x,700-y]}};
+    if(rot===3)return {W:700,H:1000,M:'matrix(0 1 -1 0 700 0)',T:function(x,y){return [700-y,x]}};
+    return {W:1000,H:700,M:'',T:function(x,y){return [x,y]}};
+  }
+  function zoomBox(G,T){
+    var full=[0,0,G.W,G.H];
+    if(!S.zoom||S.picking||!S.start||!S.pts.length)return full;
+    var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+    S.pts.forEach(function(p){
+      var q=T.apply(null,xy(p[0],p[1]));
+      minx=Math.min(minx,q[0]);maxx=Math.max(maxx,q[0]);miny=Math.min(miny,q[1]);maxy=Math.max(maxy,q[1]);
+    });
+    minx-=175;maxx+=175;miny-=170;maxy+=115;
+    var w=maxx-minx,h=maxy-miny,ar=G.W/G.H;
+    if(w/h<ar){var nw=h*ar;minx-=(nw-w)/2;w=nw}else{var nh=w/ar;miny-=(nh-h)/2;h=nh}
+    var minW=G.W*0.5;
+    if(w<minW){var cx=minx+w/2,cy=miny+h/2;w=minW;h=w/ar;minx=cx-w/2;miny=cy-h/2}
+    if(w>=G.W*0.97)return full;
+    minx=Math.max(0,Math.min(G.W-w,minx));miny=Math.max(0,Math.min(G.H-h,miny));
+    return [minx,miny,w,h];
+  }
+  function curRot(){ return (S.picking||!S.start||!S.upMode)?0:S.heading }
+  function mapSVG(){
+    var rot=curRot(), G=geo(rot), T=G.T, s='';
+    var svg=$('map'), odd=(G.W===700);
+    S.vbFull=[0,0,G.W,G.H]; S.vbTarget=zoomBox(G,T);
+    svg.style.aspectRatio=G.W+' / '+G.H;
+    svg.style.width=odd?'auto':'100%';
+    svg.style.height=odd?'min(calc(100vh - 190px),1000px)':'auto';
+    svg.style.maxWidth='100%'; svg.style.margin='0 auto';
+    s+='<defs><clipPath id="clip"><rect x="-10" y="-10" width="'+(G.W+20)+'" height="'+(G.H+20)+'"/></clipPath>'+
+       '<filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".18"/></filter></defs>';
+    s+='<g clip-path="url(#clip)">';
+    // Hintergrund-Ebene (wird gedreht)
+    s+='<g'+(G.M?' transform="'+G.M+'"':'')+'>';
+    s+='<rect width="1000" height="700" fill="var(--map-bg)"/>';
+    s+='<rect y="640" width="1000" height="60" fill="var(--water)"/>';
+    s+='<path d="M0 655 q25 -10 50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0" fill="none" stroke="var(--street)" stroke-opacity=".6" stroke-width="2"/>';
+    s+='<rect x="'+X0+'" y="'+Y0+'" width="'+DX+'" height="'+DY+'" rx="14" fill="var(--park)"/>';
+    for(var c=0;c<4;c++){for(var r=0;r<3;r++){
+      if(c===0&&r===0)continue;
+      var bx=X0+c*DX, by=Y0+r*DY, seed=(c*7+r*3)%5;
+      var rects=[[26,26,52,40],[92,32,44,34],[40,82,60,32],[116,78,36,38]];
+      for(var k=0;k<rects.length;k++){
+        if((k+seed)%4===0)continue;
+        s+='<rect x="'+(bx+rects[k][0])+'" y="'+(by+rects[k][1])+'" width="'+rects[k][2]+'" height="'+rects[k][3]+'" rx="6" fill="var(--bldg)"/>';
+      }
+    }}
+    var segsH='',segsV='';
+    for(var r2=0;r2<4;r2++){segsH+='M-20 '+(Y0+r2*DY)+' H1020 ';}
+    for(var c2=0;c2<5;c2++){segsV+='M'+(X0+c2*DX)+' -20 V640 ';}
+    s+='<path d="'+segsH+segsV+'" stroke="var(--street-edge)" stroke-width="38" fill="none"/>';
+    s+='<path d="'+segsH+segsV+'" stroke="var(--street)" stroke-width="30" fill="none"/>';
+    s+='</g>';
+    // Deko (bleibt aufrecht)
+    [[165,150],[232,212],[268,146]].forEach(function(t){var q=T(t[0],t[1]);s+='<text x="'+q[0]+'" y="'+q[1]+'" font-size="24" text-anchor="middle">🌳</text>'});
+    [[330,682,26,'⛵'],[720,680,22,'🛥️']].forEach(function(t){var q=T(t[0],t[1]);s+='<text x="'+q[0]+'" y="'+q[1]+'" font-size="'+t[2]+'" text-anchor="middle">'+t[3]+'</text>'});
+    // Route
+    if(S.help===2&&S.pts.length&&!S.picking){
+      var d='';
+      S.pts.forEach(function(p,i){var q=T.apply(null,xy(p[0],p[1]));d+=(i?'L':'M')+q[0]+' '+q[1]+' '});
+      s+='<path d="'+d+'" fill="none" stroke="var(--street)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>';
+      s+='<path class="route" pathLength="1" d="'+d+'" fill="none" stroke="var(--route)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>';
+      for(var ci=1;ci<S.pts.length;ci++){
+        var pa=T.apply(null,xy(S.pts[ci-1][0],S.pts[ci-1][1])), pb=T.apply(null,xy(S.pts[ci][0],S.pts[ci][1]));
+        var ang2=Math.atan2(pb[1]-pa[1],pb[0]-pa[0])*180/Math.PI;
+        s+='<g class="chev" transform="translate('+((pa[0]+pb[0])/2)+' '+((pa[1]+pb[1])/2)+') rotate('+ang2+')"><path d="M-6 -8 L5 0 L-6 8" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>';
+      }
+    }
+    // leere Kreuzungen
+    for(var cc=0;cc<5;cc++){for(var rr=0;rr<4;rr++){
+      if(!P.some(function(p){return p.c===cc&&p.r===rr})){
+        var q0=T.apply(null,xy(cc,rr)); s+='<circle cx="'+q0[0]+'" cy="'+q0[1]+'" r="6" fill="var(--street-edge)"/>';
+      }
+    }}
+    var activeStart=S.picking?(S.pendingStart?byId[S.pendingStart]:null):S.start;
+    var activeGoal=S.picking?null:S.goal;
+    var showMe=S.start&&!S.picking;
+    // Blick-Kegel
+    if(showMe){
+      var m=T.apply(null,xy(S.start.c,S.start.r)), ang=S.upMode?0:S.heading*90;
+      s+='<g transform="translate('+m[0]+' '+m[1]+') rotate('+ang+')">'+
+         '<path d="M0 -24 L-50 -118 Q0 -140 50 -118 Z" fill="var(--start)" fill-opacity=".2"/>'+
+         '<path d="M-14 -112 L0 -132 L14 -112" fill="none" stroke="var(--start)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>';
+    }
+    if(activeGoal){
+      var g=T.apply(null,xy(activeGoal.c,activeGoal.r));
+      s+='<circle class="pulse" cx="'+g[0]+'" cy="'+g[1]+'" r="38" fill="var(--goal)" fill-opacity=".35"/>';
+      s+='<circle cx="'+g[0]+'" cy="'+g[1]+'" r="38" fill="none" stroke="var(--goal)" stroke-width="5"/>';
+    }
+    if(activeStart){
+      var st=T.apply(null,xy(activeStart.c,activeStart.r));
+      s+='<circle cx="'+st[0]+'" cy="'+st[1]+'" r="38" fill="none" stroke="var(--start)" stroke-width="5"/>';
+    }
+    // Orte
+    P.forEach(function(p){
+      var q=T.apply(null,xy(p.c,p.r)), isS=activeStart&&activeStart.id===p.id, isG=activeGoal&&activeGoal.id===p.id;
+      var ly=54, w=p.n.length*10.2+30;
+      var pillFill=isS?'var(--start)':isG?'var(--goal)':'var(--pill)';
+      var tcol=(isS||isG)?'#fff':'var(--ink)';
+      s+='<g class="place" data-id="'+p.id+'" tabindex="'+(S.picking?0:-1)+'" role="button" aria-label="'+p.a+' '+p.n+'">';
+      s+='<circle class="ring-h" cx="'+q[0]+'" cy="'+q[1]+'" r="36" fill="none" stroke="var(--route)" stroke-width="4"/>';
+      s+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="27" fill="var(--card)" stroke="'+p.col+'" stroke-width="3.5" filter="url(#sh)"/>';
+      s+='<text x="'+q[0]+'" y="'+(q[1]+10)+'" font-size="28" text-anchor="middle">'+p.e+'</text>';
+      s+='<rect x="'+(q[0]-w/2)+'" y="'+(q[1]+ly-15)+'" width="'+w+'" height="30" rx="15" fill="'+pillFill+'" filter="url(#sh)"/>';
+      s+='<text x="'+q[0]+'" y="'+(q[1]+ly+6)+'" font-size="17" font-weight="600" text-anchor="middle" fill="'+tcol+'" font-family="Lexend,system-ui,sans-serif">'+p.n+'</text>';
+      if(isS&&showMe){
+        s+='<rect x="'+(q[0]-58)+'" y="'+(q[1]+ly+19)+'" width="116" height="24" rx="12" fill="var(--start-soft)"/>';
+        s+='<text x="'+q[0]+'" y="'+(q[1]+ly+36)+'" font-size="14" font-weight="600" text-anchor="middle" fill="var(--start)" font-family="Lexend,system-ui,sans-serif">Sie sind hier</text>';
+      }
+      s+='</g>';
+    });
+    // Person-Symbol am Start
+    if(showMe){
+      var a=T.apply(null,xy(S.start.c,S.start.r));
+      s+='<g transform="translate('+(a[0]-28)+' '+(a[1]-28)+')" pointer-events="none">'+
+         '<circle r="15" fill="var(--start)" stroke="#fff" stroke-width="3"/>'+
+         '<circle cy="-4" r="3.8" fill="#fff"/><path d="M-6.5 7 Q-6.5 0 0 0 Q6.5 0 6.5 7 Z" fill="#fff"/></g>';
+    }
+    s+='</g>';
+    return s;
+  }
+
+  /* ---------- UI ---------- */
+  var $=function(id){return document.getElementById(id)};
+  function stepWord(rel){return rel===0?'geradeaus':rel===1?'rechts':'links'}
+  function stepIcon(rel){return rel===0?'↑':rel===1?'→':'←'}
+  function esc(t){return String(t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+
+  function renderHelp(){
+    var h=$('help'), g=S.goal;
+    if(S.help===0||!g){
+      h.innerHTML='<p>'+esc($('askName').value)+' fragt nach dem Weg. '+esc($('descName').value)+' beschreibt ihn.</p>';
+      return;
+    }
+    var html='<h3 style="margin-top:0">Fragen</h3>'+
+      '<div class="sent">Entschuldigung, wo ist '+g.a+' '+esc(g.n)+'?</div>'+
+      '<div class="sent">Entschuldigung, ich suche '+acc(g)+' '+esc(g.n)+'.</div>'+
+      '<div class="sent">Wie komme ich '+esc(zum(g))+'?</div>';
+    html+='<h3>Antworten</h3>';
+    if(S.help===2){
+      var items=[];
+      S.steps.forEach(function(st,i){
+        var last=i===S.steps.length-1;
+        if(st.rel!==0)items.push({rel:st.rel,sub:''});
+        items.push({rel:0,sub:last?'bis zum Ziel':(st.n===1?'bis zur nächsten Kreuzung':'bis zur '+st.n+'. Kreuzung')});
+      });
+      var words=items.map(function(it){return stepWord(it.rel)});
+      var sentence=(words.length===1)?'Gehen Sie '+words[0]+'.':'Gehen Sie '+words.slice(0,-1).join(', dann ')+' und dann '+words[words.length-1]+'.';
+      html+='<div class="steps">'+items.map(function(it){return '<div class="step"><i>'+stepIcon(it.rel)+'</i><div>'+stepWord(it.rel)+(it.sub?'<small>'+it.sub+'</small>':'')+'</div></div>'}).join('')+
+        '<div class="step end"><i>📍</i><span>Da ist '+g.a+' '+esc(g.n)+'.</span></div></div>';
+      html+='<div class="sent">Das ist ganz einfach. '+sentence+' Da ist '+g.a+' '+esc(g.n)+'.</div>';
+    }else{
+      html+='<div class="sent">Das ist ganz einfach. Gehen Sie … und dann … Da ist '+g.a+' '+esc(g.n)+'.</div>';
+    }
+    html+='<div class="sent">Vielen Dank! → Bitte, gerne!</div>';
+    h.innerHTML=html;
+  }
+  var vbTimer=null;
+  function setBox(b){S.curBox=b;$('map').setAttribute('viewBox',b.map(function(v){return Math.round(v*10)/10}).join(' '))}
+  function animateVB(){
+    var full=S.vbFull, tgt=S.vbTarget;
+    if(vbTimer){cancelAnimationFrame(vbTimer);vbTimer=null}
+    var from=(S.fresh||!S.curBox||S.curW!==full[2])?full:S.curBox;
+    S.curW=full[2]; S.fresh=false;
+    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var same=from.every(function(v,i){return Math.abs(v-tgt[i])<1});
+    if(reduce||same){setBox(tgt);return}
+    setBox(from);
+    var t0=null,dur=700;
+    function ease(x){return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
+    function frame(ts){
+      if(t0===null)t0=ts;
+      var k=Math.min(1,(ts-t0)/dur), e=ease(k);
+      setBox(from.map(function(v,i){return v+(tgt[i]-v)*e}));
+      if(k<1)vbTimer=requestAnimationFrame(frame);else vbTimer=null;
+    }
+    setTimeout(function(){vbTimer=requestAnimationFrame(frame)},450);
+  }
+  function render(){
+    $('startName').textContent=S.start?S.start.n:'–';
+    $('goalName').textContent=S.goal?(S.goal.a+' '+S.goal.n.replace(/-/g,'\u2011')):'–';
+    $('roundNo').textContent='Runde '+S.round;
+    $('map').innerHTML=mapSVG();
+    animateVB();
+    $('map').classList.toggle('picking',S.picking);
+    $('pick').classList.toggle('on',S.picking);
+    $('pick').textContent=S.picking?'Abbrechen':'Selbst wählen';
+    var hint='';
+    if(S.picking){hint=S.pendingStart?'Jetzt das Ziel auf der Karte antippen.':'Auf der Karte erst den Start antippen, dann das Ziel.'}
+    $('hint').textContent=hint;
+    var dat=function(p){return p.a==='die'?'der':'dem'};
+    var look=S.upMode?'nach oben':'nach '+DIRN[S.heading];
+    if(S.picking){$('stand').innerHTML='Wählen Sie <b>Start</b> und <b>Ziel</b> auf der Karte.'}
+    else if(S.start){$('stand').innerHTML='Sie stehen vor '+dat(S.start)+' <b>'+esc(S.start.n)+'</b> und schauen <b>'+look+'</b>.'}
+    $('orient').textContent=S.upMode?'Norden oben':'Blick nach oben';
+    $('zoom').textContent=S.zoom?'Ganze Karte':'Zoom auf Weg';
+    document.querySelectorAll('#levelSeg button').forEach(function(b){b.setAttribute('aria-pressed',String(+b.dataset.level===S.level))});
+    $('mapnote').textContent=S.picking?'Auswahl: Norden ist oben.':(S.upMode?'Die Karte dreht sich: Sie schauen immer nach oben.':'Norden ist oben. Der grüne Kegel zeigt Ihre Blickrichtung.');
+    document.querySelectorAll('#helpSeg button').forEach(function(b){b.setAttribute('aria-pressed',String(+b.dataset.help===S.help))});
+    renderHelp();
+  }
+
+  /* ---------- Aktionen ---------- */
+  function roll(){
+    if(S.rolling)return;
+    S.picking=false;S.pendingStart=null;
+    var fin=randomPair();
+    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function done(){makeRound(fin[0],fin[1]);S.rolling=false;$('pair').classList.remove('rolling');render()}
+    if(reduce){done();return}
+    S.rolling=true;$('pair').classList.add('rolling');
+    var n=0, t=setInterval(function(){
+      var a=P[rnd(P.length)], b=P[rnd(P.length)];
+      $('startName').textContent=a.n; $('goalName').textContent=b.a+' '+b.n.replace(/-/g,'\u2011');
+      if(++n>=11){clearInterval(t);done()}
+    },70);
+  }
+  function togglePick(){
+    S.picking=!S.picking;S.pendingStart=null;render();
+  }
+  function placeClick(id){
+    if(!S.picking)return;
+    if(!S.pendingStart){S.pendingStart=id;render();return}
+    if(S.pendingStart===id)return;
+    var a=S.pendingStart;S.picking=false;S.pendingStart=null;
+    makeRound(a,id);render();
+  }
+  $('map').addEventListener('click',function(e){
+    var g=e.target.closest&&e.target.closest('.place'); if(g)placeClick(g.dataset.id);
+  });
+  $('map').addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.key===' '){var g=e.target.closest&&e.target.closest('.place'); if(g){e.preventDefault();placeClick(g.dataset.id)}}
+  });
+  $('roll').addEventListener('click',roll);
+  $('orient').addEventListener('click',function(){S.upMode=!S.upMode;S.fresh=true;render()});
+  $('zoom').addEventListener('click',function(){S.zoom=!S.zoom;render()});
+  document.querySelectorAll('#levelSeg button').forEach(function(b){
+    b.addEventListener('click',function(){S.level=+b.dataset.level;roll()});
+  });
+  $('pick').addEventListener('click',togglePick);
+  document.querySelectorAll('#helpSeg button').forEach(function(b){
+    b.addEventListener('click',function(){S.help=+b.dataset.help;render()});
+  });
+  $('swap').addEventListener('click',function(){
+    var a=$('askName'),d=$('descName'),t=a.value;a.value=d.value;d.value=t;renderHelp();
+  });
+  $('askName').addEventListener('input',renderHelp);
+  $('descName').addEventListener('input',renderHelp);
+
+  var score={1:0,2:0};
+  document.querySelectorAll('.pm button').forEach(function(b){
+    b.addEventListener('click',function(){
+      var t=b.dataset.t;score[t]=Math.max(0,score[t]+(+b.dataset.d));$('n'+t).textContent=score[t];
+    });
+  });
+  $('theme').addEventListener('click',function(){
+    var r=document.documentElement,dark=r.getAttribute('data-theme')==='dark';
+    if(dark){r.removeAttribute('data-theme');$('theme').textContent='Dunkel'}
+    else{r.setAttribute('data-theme','dark');$('theme').textContent='Hell'}
+  });
+  $('fs').addEventListener('click',function(){
+    try{
+      if(document.fullscreenElement){document.exitFullscreen()}
+      else if(document.documentElement.requestFullscreen){document.documentElement.requestFullscreen()}
+    }catch(err){}
+  });
+
+  /* ---------- Folien ---------- */
+  var slides=[
+    '<h2>Nach dem Weg fragen</h2><div class="rows">'+
+      '<div class="row">Entschuldigung. Wo ist <em>…</em> ?</div>'+
+      '<div class="row">Entschuldigung. Ich habe eine Frage. Wo ist <em>…</em> ?</div>'+
+      '<div class="row">Entschuldigung. Ich suche <em>…</em></div>'+
+      '<div class="row">Wie komme ich <em>zum</em> Bahnhof? / <em>zur</em> Post?</div></div>'+
+      '<p class="note">zum: der / das &nbsp;&nbsp; zur: die &nbsp;&nbsp; Ich suche: <b>den</b> Bahnhof, die Post, das Hotel</p>',
+    '<h2>Den Weg beschreiben</h2><div class="dirs">'+
+      '<div class="dir"><i>↑</i><b>geradeaus</b></div>'+
+      '<div class="dir"><i>→</i><b>rechts</b></div>'+
+      '<div class="dir"><i>←</i><b>links</b></div></div>'+
+      '<div class="rows"><div class="row green">Das ist ganz einfach. Gehen Sie rechts und dann geradeaus. Da ist <em>…</em></div>'+
+      '<div class="row green">Vielen Dank! – Bitte, gerne!</div></div>',
+    '<h2>Formeller Imperativ</h2><p class="lead">Wenn man eine Person mit <b>Sie</b> anspricht.</p>'+
+      '<div class="formula"><span class="t t1">Verb (3. Person Plural)</span>+<span class="t t2">Sie</span>+<span class="t t3">Rest</span>!</div>'+
+      '<div class="rows"><div class="row">Gehen Sie geradeaus!</div><div class="row">Fahren Sie links!</div>'+
+      '<div class="row">sein ist unregelmäßig: Seien Sie pünktlich!</div></div>',
+    '<h2>Los geht’s!</h2><p class="lead">Zwei Personen kommen nach vorne. Eine Person fragt, die andere beschreibt den Weg. Wer sich unsicher ist, nutzt die Hilfe.</p>'+
+      '<div class="rows"><div class="row">Entschuldigung, wo ist … ?</div><div class="row green">Das ist ganz einfach. Gehen Sie … Da ist …</div></div>'
+  ];
+  var di=0;
+  function showSlide(i){
+    di=Math.max(0,Math.min(slides.length-1,i));
+    $('slide').innerHTML=slides[di];
+    $('deckCount').textContent=(di+1)+' / '+slides.length;
+    $('dots').innerHTML=slides.map(function(_,k){return '<b class="'+(k===di?'on':'')+'"></b>'}).join('');
+    $('prev').style.visibility=di===0?'hidden':'visible';
+    $('next').textContent=di===slides.length-1?'Zum Spiel':'Weiter';
+  }
+  function openDeck(){$('deck').classList.add('open');showSlide(0)}
+  function closeDeck(){$('deck').classList.remove('open')}
+  $('openDeck').addEventListener('click',openDeck);
+  $('closeDeck').addEventListener('click',closeDeck);
+  $('prev').addEventListener('click',function(){showSlide(di-1)});
+  $('next').addEventListener('click',function(){if(di===slides.length-1)closeDeck();else showSlide(di+1)});
+  document.addEventListener('keydown',function(e){
+    if(!$('deck').classList.contains('open'))return;
+    if(e.key==='ArrowRight'){$('next').click()}
+    else if(e.key==='ArrowLeft'){showSlide(di-1)}
+    else if(e.key==='Escape'){closeDeck()}
+  });
+
+  /* ---------- Start ---------- */
+  var first=randomPair(); makeRound(first[0],first[1]); render();
+})();
+</script>
+</body>
+</html>
